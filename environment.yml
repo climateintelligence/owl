@@ -11,3 +11,11 @@ dependencies:
 - psutil
 # tests
 - pytest
+# data fetch
+- cdsapi
+# visualisation
+- matplotlib
+# data analysis
+- netCDF4
+- cdo # avoidable if possible
+- joblib
