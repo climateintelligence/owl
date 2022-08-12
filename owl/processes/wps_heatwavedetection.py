@@ -3,7 +3,7 @@
 from owl.HWs_detection import *
 
 # libraries for service perfomance
-from pywps import Process, LiteralInput, LiteralOutput, UOM
+from pywps import Process, FORMATS, LiteralInput, LiteralOutput, UOM, ComplexInput, ComplexOutput
 from pywps.app.Common import Metadata
 
 # initialize logging:
@@ -45,14 +45,14 @@ class HWs_detection(Process):
                           abstract='netCDF containing a Heatwave index ... and more description',
                           as_reference=True,
                           supported_formats=[FORMATS.NETCDF]),
-            ComplexOutput('plot', 'Graphical visualisation of the Heatwave',
-                          # abstract='Plot of original input file. First timestep.',
-                          as_reference=True,
-                          supported_formats=[FORMAT_PNG]),
+            # ComplexOutput('plot', 'Graphical visualisation of the Heatwave',
+                          # # abstract='Plot of original input file. First timestep.',
+                          # as_reference=True,
+                          # supported_formats=[FORMAT_PNG]),
                           ]
 
 
-        super(ClintAI, self).__init__(
+        super(HWs_detection, self).__init__(
             self._handler,
             identifier="HWs_detection",
             title="HWs_detection",
@@ -63,13 +63,14 @@ class HWs_detection(Process):
                     title="HW Detection",
                     # href="https://github.com/FREVA-CLINT/duck/raw/main/docs/source/_static/crai_logo.png",
                     # role=MEDIA_ROLE),
-                # Metadata('CRAI', 'https://github.com/FREVA-CLINT/climatereconstructionAI'),
-                Metadata('Clint Project', 'https://climateintelligence.eu/'),
-                # Metadata('HadCRUT on Wikipedia', 'https://en.wikipedia.org/wiki/HadCRUT'),
-                # Metadata('HadCRUT4', 'https://www.metoffice.gov.uk/hadobs/hadcrut4/'),
-                # Metadata('HadCRUT5', 'https://www.metoffice.gov.uk/hadobs/hadcrut5/'),
-                # Metadata('Near Surface Air Temperature',
-                #          'https://www.atlas.impact2c.eu/en/climate/temperature/?parent_id=22'),
+                    # Metadata('CRAI', 'https://github.com/FREVA-CLINT/climatereconstructionAI'),
+                    # Metadata('Clint Project', 'https://climateintelligence.eu/'),
+                    # Metadata('HadCRUT on Wikipedia', 'https://en.wikipedia.org/wiki/HadCRUT'),
+                    # Metadata('HadCRUT4', 'https://www.metoffice.gov.uk/hadobs/hadcrut4/'),
+                    # Metadata('HadCRUT5', 'https://www.metoffice.gov.uk/hadobs/hadcrut5/'),
+                    # Metadata('Near Surface Air Temperature',
+                    #          'https://www.atlas.impact2c.eu/en/climate/temperature/?parent_id=22'),
+                    )
             ],
             inputs=inputs,
             outputs=outputs,
@@ -179,44 +180,17 @@ class HWs_detection(Process):
             else:
                 cv_str = 'notCV'
 
-        ##################################
-        ### execute the Heatwave Detection
-        for (j, jmemb) in enumerate(range(first_memb, last_memb)):
-            memb_str = 'memb'+str(jmemb)
-            parameters_str = reg_name+"_"+season+"_"+cv_str+'_percent%i'%(percent_thresh)+'_daymin%i'%(duration_min)+"_ref%i-%i_"%(start_year, end_year)+memb_str
-            varname = 'subHW_'+parameters_str
-            pathHWMI = '/cnrm/pastel/USERS/lecestres/NO_SAVE/data/'+expname+'/'+memb_str+'/'+season+'/'+varname+'/'
-            files = glob(pathHWMI + '*.nc')
-            files.sort()
-            allsubHWslst = []
-            def parallel_years(k_start_year, k_end_year):
-                year_range = k_end_year-k_start_year
-                k_min = k_start_year-start_year
-                k_max = k_min+year_range
-                for file in files[k_min:k_max]:
-                    varf=netCDF4.Dataset(file)
-                    varf.variables[varname]
-                    vararray, lats_reg, lons_reg = extract_array(varf, varname, ndayseas, np.array(lons_bnds), np.array(lats_bnds),  start_time = 0, level=0)
-                    subHWs_iyeararray = vararray[:, np.newaxis, :, :]
-                    maskobs = subHWs_iyeararray.mask
-                    allsubHWslst.append(subHWs_iyeararray)
-                allsubHWs_array = np.ma.array(allsubHWslst)
-                #print('maskobs : ', maskobs)
-                args = (expname, reg_name, memb_str, season, parameters_str, k_start_year, lats_reg, lons_reg)
-                print(allsubHWs_array.shape)
-                calc_HW_MY(allsubHWs_array, maskobs, lats_reg, lons_reg, args, allowdist=1)
+        # ##################################
+        # ### execute the Heatwave Detection
 
-            CPUs = os.cpu_count()
-            years_per_CPU = int(np.ceil(nyear/CPUs))
-            k_list = [(start_year + i*(years_per_CPU), min(start_year + (i+1)*years_per_CPU, end_year+1)) for i in range(CPUs)]
+        # Just passing through the input file
 
-            start_time = time.time()
-            Parallel(n_jobs=min(CPUs,nyear), backend='multiprocessing', verbose = 20)(delayed(parallel_years)(k_start_year, k_end_year) for (k_start_year, k_end_year) in k_list)
-            print('Total time for detection : ', time.time() - start_time)
+
+        response.outputs["output"].file = dataset
 
 
         ##################################
-        ### set the output 
+        ### set the output
 
         response.update_status('done.', 100)
         return response

@@ -7,7 +7,7 @@ import numpy as np
 import numpy.ma as ma
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from function_read import *
+# from function_read import *
 # cdo = Cdo()
 import math
 from glob import glob
