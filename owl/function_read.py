@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # Read data from an opendap server
 import netCDF4
-# from cdo import *
+from cdo import *
 import requests
 import numpy as np
 import numpy.ma as ma
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 # from function_read import *
-# cdo = Cdo()
+cdo = Cdo()
 import math
 from glob import glob
 from netCDF4 import num2date, date2num
