@@ -1,5 +1,5 @@
 # libraries for data analysis
-
+from pathlib import Path
 from owl.HWs_detection import *
 
 # libraries for service perfomance
@@ -96,27 +96,29 @@ class HWs_detection(Process):
         if reg_name == 'north_pacific':
             lats_bnds = np.array([30,65])
             lons_bnds = np.array([120, -120])
-        if reg_name == 'north_atlantic':
+        elif reg_name == 'north_atlantic':
             lats_bnds = np.array([30,65])
             lons_bnds = np.array([-80, 0])
-        if reg_name == 'indian_ocean':
+        elif reg_name == 'indian_ocean':
             lats_bnds = np.array([-30,30])
             lons_bnds = np.array([45, 110])
-        if reg_name == 'austral_ocean':
+        elif reg_name == 'austral_ocean':
             lats_bnds = np.array([-90,-30])
             lons_bnds = np.array([-180, 180])
-        if reg_name == 'tropical_atlantic':
+        elif reg_name == 'tropical_atlantic':
             lats_bnds = np.array([-30,30])
             lons_bnds = np.array([-70, 20])
-        if reg_name == 'tropical_pacific':
+        elif reg_name == 'tropical_pacific':
             lats_bnds = np.array([-30,30])
             lons_bnds = np.array([120, -70])
-        if reg_name == 'mediterranee':
+        elif reg_name == 'mediterranee':
             lats_bnds = np.array([30,50])
             lons_bnds = np.array([-5, 40])
-        if reg_name == 'global':
+        elif reg_name == 'global':
             lats_bnds = np.array([-90,90])
             lons_bnds = np.array([-180,180])
+        else:
+            raise Exception('not regeion detected')
 
         ### EXPERIENCE NAME
         expname = "ocean_reanalysis_GREP"
@@ -137,6 +139,9 @@ class HWs_detection(Process):
         elif expname == 'sst_retroprevision_sys7':
             end_year=2016
             start_year=1993
+        else:
+            raise Exception('something went wrong')
+
         nyear=end_year-start_year+1
 
         ### SEASON
@@ -152,6 +157,9 @@ class HWs_detection(Process):
             season_start_day = [12,1] #1stDec
             season_end_day = [3,1] #28thFeb
             first_day = 30
+        else:
+            raise Exception('something went wrong')
+
         ndayseas = nday//duration_min +1
 
         if expname == "ocean_reanalysis_GREP":
@@ -159,26 +167,25 @@ class HWs_detection(Process):
             first_memb=0
             last_memb=1
             nmemb = last_memb-first_memb
-
             ### CROSS VALIDATION
             cv = True
             if cv:
                 cv_str = "CV"
             else:
                 cv_str = 'notCV'
-
         elif expname == "sst_retroprevision_sys7":
             ### NUMBER OF MEMBS
             first_memb=0
             last_memb=25
             nmemb = last_memb-first_memb    ### NUMBER OF MEMBS
-
             ### CROSS VALIDATION
             cv = True
             if cv:
                 cv_str = "CV"
             else:
                 cv_str = 'notCV'
+        else:
+            raise Exception('something went wrong')
 
         # ##################################
         # ### execute the Heatwave Detection
@@ -187,7 +194,6 @@ class HWs_detection(Process):
 
 
         response.outputs["output"].file = dataset
-
 
         ##################################
         ### set the output

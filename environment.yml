@@ -1,10 +1,10 @@
 name: owl
 channels:
 - conda-forge
-- defaults
+# - defaults
 dependencies:
 - pip
-- python>=3.7,<3.10
+- python
 - pywps>=4.5.1,<4.6
 - jinja2
 - click
@@ -12,10 +12,11 @@ dependencies:
 # tests
 - pytest
 # data fetch
-- cdsapi
+# - cdsapi
 # visualisation
 - matplotlib
 # data analysis
 - netCDF4
-- cdo # avoidable if possible
+# - python-cdo
+# - cdo # avoidable if possible
 - joblib
