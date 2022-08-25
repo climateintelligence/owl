@@ -41,7 +41,7 @@ class HWs_detection(Process):
             ]
 
         outputs = [
-            ComplexOutput('output', 'netCDF containing a Heatwave index',
+            ComplexOutput('heatwave_index', 'netCDF containing a Heatwave index',
                           abstract='netCDF containing a Heatwave index ... and more description',
                           as_reference=True,
                           supported_formats=[FORMATS.NETCDF]),
@@ -135,28 +135,6 @@ class HWs_detection(Process):
         memb_str='0' # there are not members for ERA5
         nrealisation=1
 
-        reg_name ='test'
-
-        # Region #
-        if reg_name == 'test':
-            min_lon = 10
-            min_lat = 40
-            max_lon = 20
-            max_lat = 50
-
-        if reg_name == 'Europe':
-            min_lon = -15
-            min_lat = 25
-            max_lon = 60
-            max_lat = 70
-        if reg_name == 'global':
-            min_lon = 0
-            min_lat = -90
-            max_lon = 360
-            max_lat = 90
-
-        lats_bnds = np.array([min_lat,max_lat])
-        lons_bnds = np.array([min_lon, max_lon])
         # Season #
         season='15MJJA'
         season_start_day=[5,15]
@@ -180,41 +158,22 @@ class HWs_detection(Process):
         duration_min = 3
 
 
-        low=False # if data with 1 degree resolution is used (True) or not (False)
-
-        if (low==True):
-            # path="/work/csp/vt17420/ERA5/daily/russo/"+var+"_r360x180/"
-            # Where the outputs will be saved
-            # dirout="/work/csp/vt17420/ERA5/daily/russo/"+var+"_r360x180/HWMI/"
-            path="../testdata/"
-            dirout="../testdata/"
-            lons_reg=np.arange(min_lon,max_lon,1)
-            lats_reg=np.arange(min_lat,max_lat,1)
-            nlon=len(lons_reg)
-            nlat=len(lats_reg)
-        else:
-            # path="/work/csp/vt17420/ERA5/daily/global/"+var+"/"
-            # dirout="/data/csp/vt17420/CLINT_PRODUCTS/"+expname+"_HWMI_"+var+"/"
-            path="../testdata/"
-            dirout="../testdata/"
-            lons_reg=np.arange(min_lon,max_lon+0.25,0.25)
-            lats_reg=np.arange(min_lat,max_lat+0.25,0.25)
-            nlon=len(lons_reg)
-            nlat=len(lats_reg)
+        lons_reg=np.arange(min_lon,max_lon+0.25,0.25)
+        lats_reg=np.arange(min_lat,max_lat+0.25,0.25)
+        nlon=len(lons_reg)
+        nlat=len(lats_reg)
 
         data=np.zeros((nlon,nlat,nyear,nday,1)) # daily data for all the years
 
-
         for iyear,year in enumerate(range(ref_year1,ref_year2+1)):
             days_may=np.linspace(15, 31, num=17)
-            obs1=xr.open_dataset(file)
+            obs1=xr.open_dataset(dataset)
             if low==False:
             # selecting BBox:
                 obs1 = obs1.sel(latitude=slice(max_lat,min_lat),longitude=slice(min_lon,max_lon))
             # selecting time and bbox
             obs=obs1.sel(time=obs1.time.time.dt.year.isin(year))
             obs = obs.sel(time=~((obs.time.dt.month == 2) & (obs.time.dt.day == 29)))
-
             data[:,:,iyear,:,0]=np.transpose(obs.to_array()[0,:,:,:],[2,1,0])
 
         nmemb=data.shape[4]
@@ -248,8 +207,6 @@ class HWs_detection(Process):
         # ##################################
         # ### write out the values into the output file
 
-        if os.path.isdir(dirout)==False:
-            os.makedirs(dirout)
         years=range(ref_year1,ref_year2)
         j=0
         for i,iyear in enumerate(range(ref_year1, ref_year2+1)):
@@ -257,8 +214,8 @@ class HWs_detection(Process):
             parameters_str = reg_name+"_"+season+"_"+cv_str+'_percent%i'%(percent_thresh)+'_daymin%i'%(duration_min)+"_ref_"+str(ref_year1)+"_"+str(ref_year2)+"_year_"+str(iyear)
             varout1 = "HWMI"+"_"+var+"_"+parameters_str
             vout1="HWMI"+"_"+var
-            fileout=dirout+varout1+".nc"#0%i01, monstart)
-            print(fileout)
+            fileout=workdir+varout1+".nc"#0%i01, monstart)
+
             if len(glob(fileout))==1:
                 os.remove(fileout)
             fout=netCDF4.Dataset(fileout, "w")
@@ -310,7 +267,7 @@ class HWs_detection(Process):
         ##################################
         ### set the output
 
-        response.outputs["output"].file = dataset
+        response.outputs["output"].file = fileout
 
         response.update_status('done.', 100)
         return response
