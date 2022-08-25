@@ -1,5 +1,5 @@
 import numpy as np
-from function_read import *
+from owl.function_read import *
 from scipy.stats import gaussian_kde
 
 def runningmean(field, ndrun):
@@ -8,7 +8,7 @@ def runningmean(field, ndrun):
     run.shape
     run = np.convolve(field, np.ones((ndrun,))/ndrun)[(ndrun-1-ndrun/2):(-ndrun+ndrun/2)]
     return(run)
-            
+
 
 def find_subHW(target, percent_thresh, duration_min, cross_valid, opt="polyfit"):
     """function that find all the sub heatwave from an array
@@ -16,13 +16,13 @@ def find_subHW(target, percent_thresh, duration_min, cross_valid, opt="polyfit")
     percent_thresh: Chosen percentile (usually 90, 95 or 99)
     duration_min: Minimum length of a HW or a sub HW
     return: all sub heatwaves in a list of list of list and ecfmax to construct the fit"""
-    
+
     #Do we have interest in keeping cross validation? Yes we have
-    
+
     targetaux=np.array(target)
     #print(target.shape)
     (nyear, nday, nmemb) = target.shape
-    
+
     if cross_valid:
         #if cross_validation, only use of the first memb
         perc_thresh_climlst=[]
@@ -33,18 +33,18 @@ def find_subHW(target, percent_thresh, duration_min, cross_valid, opt="polyfit")
             if opt=="runningmean":
                 ndrun=30
                 perc_thresh_clim=runningmean(perc_thresh_clim_not_smoothed,ndrun)
-            #compute the smoothed climatology using a polyfit of order 6                                
+            #compute the smoothed climatology using a polyfit of order 6
             if opt=="polyfit":
                 perc_thresh_clim = np.polyval(np.polyfit(range(nday), perc_thresh_clim_not_smoothed, deg=6), range(nday))
             perc_thresh_climlst.append(perc_thresh_clim)
         perc_thresh_clim=np.array(perc_thresh_climlst)
         perc_thresh_clim=extend_table(perc_thresh_clim, [nmemb])
         perc_thresh_clim=np.swapaxes(np.swapaxes(perc_thresh_clim,1,0), 2,1)
-        
+
     else:
         targetaux2 = np.swapaxes(targetaux, 1,2)
         targetaux2 = np.reshape(targetaux2, (nyear * nmemb, nday))
-        perc_thresh_clim_not_smoothed = np.percentile(targetaux2[:,:], percent_thresh, axis=0)        
+        perc_thresh_clim_not_smoothed = np.percentile(targetaux2[:,:], percent_thresh, axis=0)
         if opt=="runningmean":
             ndrun=30
             perc_thresh_clim = runningmean(perc_thresh_clim_not_smoothed,ndrun)
@@ -53,19 +53,19 @@ def find_subHW(target, percent_thresh, duration_min, cross_valid, opt="polyfit")
             perc_thresh_clim = np.polyval(np.polyfit(range(nday), perc_thresh_clim_not_smoothed, deg=6), range(nday))
         perc_thresh_clim = extend_table(perc_thresh_clim, [nyear, nmemb])
         perc_thresh_clim = np.swapaxes(perc_thresh_clim, 1,2)
-    
+
     #array to keep subHW values
     ndayseas = nday//duration_min + 1
     subHWarray = np.zeros((nyear, ndayseas, nmemb))
-    
+
     #check days exceeding the percentile
     #exed_percentile = (target[:,limseas1:limseas2, :] - perc_thresh_clim[:, limseas1:limseas2, :])
     exed_percentile = (target - perc_thresh_clim)
     exed_percentile = np.ma.array(exed_percentile, mask=exed_percentile<0)
-    
+
     ndaysexed_percentile = np.sum(exed_percentile>0, axis = 1)
     DD_threshold = np.ma.sum(exed_percentile, axis = 1) #np.ma.sum?, np.ma?
-    
+
     #find heatwave (>x days exceeding threshold percentile)
     mask_duration_min = np.array(1-exed_percentile.mask, copy=True)
     #print('mask_duration_min.shape : ', mask_duration_min.shape)
@@ -73,9 +73,9 @@ def find_subHW(target, percent_thresh, duration_min, cross_valid, opt="polyfit")
         mask_duration_min[:,0:-(ilen),:] = mask_duration_min[:,0:-(ilen),:] + (1-exed_percentile.mask[:,ilen:,:])
     #remove heat wave shorter than duration_min
     mask_duration_min[mask_duration_min<duration_min] = 0
-    
+
     HWMI = np.zeros((nyear,nmemb)) #Heat wave magnitude
-    #fit the accumulative distribution function 
+    #fit the accumulative distribution function
     ecdfmax=[]
     HWlstmembyear=[]
     HWstartmembyear = []
@@ -97,17 +97,17 @@ def find_subHW(target, percent_thresh, duration_min, cross_valid, opt="polyfit")
                     subHW = np.sum(exed_percentile[iyear,itime:itime+duration_min,imemb])
                     subHWarray[iyear, itime//duration_min, imemb] = subHW
                     subHWlst.append(subHW)
-                    
+
                     #check if the heatwave is longer than duration_min
-                    subHW = 0 #variable to keep subheatwave 
+                    subHW = 0 #variable to keep subheatwave
                     ilen = 1 #variable to compute the length of the big Heatwave
-                    
+
                     while (itime+ilen+duration_min-1<nday) & (mask_duration_min[iyear,itime+ilen,imemb] == duration_min):
                         #print "big heatwave"
                         mask_duration_min[iyear,itime,imemb] += 1
                         #remove subheawes that are part of the big heat wave
                         mask_duration_min[iyear,itime+ilen,imemb] = 0
-                        #cumulate subheatwave magnitude 
+                        #cumulate subheatwave magnitude
                         subHW=subHW+exed_percentile[iyear,itime+ilen+duration_min-1,imemb]
                         #when we reach a duration_min length subHW keep it
                         if ilen%duration_min == 0:
@@ -115,13 +115,13 @@ def find_subHW(target, percent_thresh, duration_min, cross_valid, opt="polyfit")
                             subHWarray[iyear, itime//duration_min+ilen//duration_min, imemb] = subHW
                             subHW = 0
                         ilen = ilen+1
-                        
+
                     #keep subheatwave of length <duration_min if included in a larger heatwave
                     if subHW > 0:
                         subHWlst.append(subHW)
                         subHWarray[iyear, itime//duration_min+(ilen-1)//duration_min+1, imemb] = subHW
                     #print("itime",itime)
-                    
+
                     #keep the subHWlst list in the HW list
                     HWlst.append(subHWlst)
                     # keep the beginning and end of the HW
@@ -150,10 +150,9 @@ def find_subHW(target, percent_thresh, duration_min, cross_valid, opt="polyfit")
         HWendmembyear.append(HWendmemb)
 
     return(HWlstmembyear, HWstartmembyear, HWendmembyear, ecdfmax, ndaysexed_percentile, DD_threshold, subHWarray)
-    
 
 def fitforHWMI(ecdfmax, cross_valid, yeartoexclude = None):
-    """compute the gaussian fit 
+    """compute the gaussian fit
     ecdfmax: list of yearly maximum of heatwave for function find_subHW
     cross_valid: True/False
     year_to_exclude: int (only if using cross validation
@@ -161,7 +160,7 @@ def fitforHWMI(ecdfmax, cross_valid, yeartoexclude = None):
     ecdfmax=np.array(ecdfmax)
     if cross_valid:
         ecdfmax = np.delete(ecdfmax, yeartoexclude)
-    
+
     #remove -1 from ecdf max (corresponding to years with no heatwave)
     ecdfmaxfit = ecdfmax[ecdfmax>-1]
     try:
@@ -196,7 +195,7 @@ def calcHWMImemb(HWlstmemb, subHWarrayyear, nday, duration_min, nmemb, kde):
             #find the problability corresponding to the subHW on the fitted cdf
             #print sublst
             if kde!=False:
-                fitsum=sum([kde.integrate_box_1d(0,i) for i in sublst])                
+                fitsum=sum([kde.integrate_box_1d(0,i) for i in sublst])
                 #print fit
                 #keep the maximum
                 maxHWnorm=max(fitsum,maxHWnorm)
@@ -212,7 +211,7 @@ def calcHWMImemb(HWlstmemb, subHWarrayyear, nday, duration_min, nmemb, kde):
             #store HW magnitude
         HWMI.append(maxHWnorm)
         HWmembfit.append(HWlstfit)
-        #print HWMI   
+        #print HWMI
     return(HWMI, HWmembfit, fitsubHWarray)
 
 def calc_HWMIyear(target, cross_valid, percent_thresh, duration_min):
@@ -247,5 +246,5 @@ def calc_HWMIyear(target, cross_valid, percent_thresh, duration_min):
         HWMIyear.append(HWMI)
         HWlstyear.append(HWlstfit)
         fitsubHWarrayyear[iyear, :, :] = fitsubHWarray
-        
+
     return(HWMIyear, HWlstyear, HWstartmembyear, HWendmembyear, ndaysexed_percentile, DD_threshold, subHWarrayyear, fitsubHWarrayyear, sstMeanarrayyear, count_impossible_fit)

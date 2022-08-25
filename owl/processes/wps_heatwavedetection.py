@@ -1,7 +1,5 @@
 # libraries for data analysis
 from pathlib import Path
-from owl.HWs_detection import *
-
 # libraries for service perfomance
 from pywps import Process, FORMATS, LiteralInput, LiteralOutput, UOM, ComplexInput, ComplexOutput
 from pywps.app.Common import Metadata
@@ -9,6 +7,14 @@ from pywps.app.Common import Metadata
 # initialize logging:
 import logging
 LOGGER = logging.getLogger("PYWPS")
+
+# process specific
+import numpy as np
+import xarray as xr
+from joblib import Parallel, delayed
+import joblib
+import time
+from owl.HWMI import calc_HWMIyear
 
 # Process discription
 class HWs_detection(Process):
@@ -81,12 +87,6 @@ class HWs_detection(Process):
     def _handler(self, request, response):
         ######################################
         # import required libraries
-        import numpy as np
-        import xarray as xr
-        from joblib import Parallel, delayed
-        import joblib
-        import time
-        from owl.HWMI import *
 
         #####################################
         ### read the values of the inputs
@@ -157,9 +157,8 @@ class HWs_detection(Process):
         #duration_min = 5
         duration_min = 3
 
-
-        lons_reg=np.arange(min_lon,max_lon+0.25,0.25)
-        lats_reg=np.arange(min_lat,max_lat+0.25,0.25)
+        lons_reg=np.arange(lons_bnds[0],lons_bnds[1]+0.25,0.25)
+        lats_reg=np.arange(lats_bnds[0],lats_bnds[1]+0.25,0.25)
         nlon=len(lons_reg)
         nlat=len(lats_reg)
 
@@ -168,9 +167,8 @@ class HWs_detection(Process):
         for iyear,year in enumerate(range(ref_year1,ref_year2+1)):
             days_may=np.linspace(15, 31, num=17)
             obs1=xr.open_dataset(dataset)
-            if low==False:
             # selecting BBox:
-                obs1 = obs1.sel(latitude=slice(max_lat,min_lat),longitude=slice(min_lon,max_lon))
+            obs1 = obs1.sel(latitude=slice(lats_bnds[0],lats_bnds[1]),longitude=slice(lons_bnds[0],lons_bnds[1]))
             # selecting time and bbox
             obs=obs1.sel(time=obs1.time.time.dt.year.isin(year))
             obs = obs.sel(time=~((obs.time.dt.month == 2) & (obs.time.dt.day == 29)))
