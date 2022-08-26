@@ -168,7 +168,7 @@ class HWs_detection(Process):
             days_may=np.linspace(15, 31, num=17)
             obs1=xr.open_dataset(dataset)
             # selecting BBox:
-            obs1 = obs1.sel(latitude=slice(lats_bnds[0],lats_bnds[1]),longitude=slice(lons_bnds[0],lons_bnds[1]))
+            obs1 = obs1.sel(latitude=slice(lats_bnds[1],lats_bnds[0]),longitude=slice(lons_bnds[0],lons_bnds[1]))
             # selecting time and bbox
             obs=obs1.sel(time=obs1.time.time.dt.year.isin(year))
             obs = obs.sel(time=~((obs.time.dt.month == 2) & (obs.time.dt.day == 29)))
