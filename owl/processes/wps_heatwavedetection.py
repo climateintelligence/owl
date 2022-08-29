@@ -9,11 +9,14 @@ import logging
 LOGGER = logging.getLogger("PYWPS")
 
 # process specific
+import tempfile
+import datetime
 import numpy as np
 import xarray as xr
 from joblib import Parallel, delayed
 import joblib
 import time
+from netCDF4 import num2date, date2num, Dataset
 from owl.HWMI import calc_HWMIyear
 
 # Process discription
@@ -212,12 +215,13 @@ class HWs_detection(Process):
             parameters_str = reg_name+"_"+season+"_"+cv_str+'_percent%i'%(percent_thresh)+'_daymin%i'%(duration_min)+"_ref_"+str(ref_year1)+"_"+str(ref_year2)+"_year_"+str(iyear)
             varout1 = "HWMI"+"_"+var+"_"+parameters_str
             vout1="HWMI"+"_"+var
-            fileout=workdir+varout1+".nc"#0%i01, monstart)
+            fileout = tempfile.mktemp(suffix='.nc', prefix='heatwaveindex_', dir=workdir)
+            # fileout=workdir+varout1+".nc" #0%i01, monstart)
 
-            if len(glob(fileout))==1:
-                os.remove(fileout)
-            fout=netCDF4.Dataset(fileout, "w")
-            #fin=netCDF4.Dataset(targetflst[iyear])
+            # if len(glob(fileout))==1:
+            #     os.remove(fileout)
+            fout=Dataset(fileout, "w")
+            #fin=Dataset(targetflst[iyear])
             lat = fout.createDimension('lat', nlat)
             lon = fout.createDimension('lon', nlon)
             rea = fout.createDimension('realisation', nrealisation)
