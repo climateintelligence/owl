@@ -229,42 +229,57 @@ class HWs_detection(Process):
             longitudes = fout.createVariable('lon', np.float32,  ('lon',))
 
             # Time variable
-            timedim = fout.createDimension('time', None)
-            times = fout.createVariable('time', np.float64, ('time',))
-            times.units = "hours since 1970-01-01 00:00:00"
-            times.calendar = 'gregorian'
-            times[:]=date2num(datetime(iyear,season_start_day[0],season_start_day[1]), units=times.units,calendar = times.calendar) ####______HERE_____
+            try:
+                timedim = fout.createDimension('time', None)
+                times = fout.createVariable('time', np.float64, ('time',))
+                times.units = "hours since 1970-01-01 00:00:00"
+                times.calendar = 'gregorian'
+                times[:]=date2num(datetime(iyear,season_start_day[0],season_start_day[1]), units=times.units,calendar = times.calendar)
+                LOGGER.info('timestamps filled in netCDF ourput file')
+            except Exception as ex:
+                msg = 'FAILED to write timesamps: {} '.format(ex)
+                LOGGER.exception(msg)
 
-            latitudes[:] = lats_reg
-            lonaux = lons_reg
-            longitudes[:] = lonaux
-            latitudes.units = 'degree_north'
-            longitudes.units = 'degree_east'
+            try:
+                latitudes[:] = lats_reg
+                lonaux = lons_reg
+                longitudes[:] = lonaux
+                latitudes.units = 'degree_north'
+                longitudes.units = 'degree_east'
 
-            # Create the HWMI 4-d variable
-            HWMIfile = fout.createVariable(vout1, np.float32, ('time','realisation','lat','lon'))
-            fout.description = 'HWMI index (Russo et al. 2014) for ' + season + ' computed in cross validation'
-            fout.history = 'computed from python script by C.Prodhomme & S.Lecestre' + time.ctime(time.time())
-            fout.source = 'HWMI for ' + expname
-            latitudes.units = 'degree_north'
-            longitudes.units = 'degree_east'
-            HWMIfile.units = 'Probability'
+                # Create the HWMI 4-d variable
+                HWMIfile = fout.createVariable(vout1, np.float32, ('time','realisation','lat','lon'))
+                fout.description = 'HWMI index (Russo et al. 2014) for ' + season + ' computed in cross validation'
+                fout.history = 'computed from python script by C.Prodhomme & S.Lecestre' + time.ctime(time.time())
+                fout.source = 'HWMI for ' + expname
+                latitudes.units = 'degree_north'
+                longitudes.units = 'degree_east'
+                HWMIfile.units = 'Probability'
 
-            # Create the nb of days 4-d variable
-            expercentfile = fout.createVariable("nbdaygtpercentpct_"+var, np.float32, ('time','realisation','lat','lon'))
-            expercentfile.units = 'Number of days'
+                # Create the nb of days 4-d variable
+                expercentfile = fout.createVariable("nbdaygtpercentpct_"+var, np.float32, ('time','realisation','lat','lon'))
+                expercentfile.units = 'Number of days'
 
-            # Write the HWMI variable
-            HWMIaux=HWMI[i:i+1,0:1,:,:]
-            HWMIfile[0:1,0:1,:,:]=HWMIaux
+                # Write the HWMI variable
+                HWMIaux=HWMI[i:i+1,0:1,:,:]
+                HWMIfile[0:1,0:1,:,:]=HWMIaux
 
-            # Write the number of days
-            exedaux=ndayexedthreshold[i:i+1,j:j+1,:,:]
-            expercentfile[0:1,0:1,:,:]=exedaux
+                # Write the number of days
+                exedaux=ndayexedthreshold[i:i+1,j:j+1,:,:]
+                expercentfile[0:1,0:1,:,:]=exedaux
+                LOGGER.info('values filled in netCDF ourput file')
+            except Exception as ex:
+                msg = 'FAILED to write values into netCDF: {} '.format(ex)
+                LOGGER.exception(msg)
 
             # Write the DDthreshold
             #DDthresholdfile=DDthreshold
-            fout.close()
+            try:
+                fout.close()
+                LOGGER.info('netCDF output file closed')
+            except Exception as ex:
+                msg = 'FAILED to close netCDF output file : {} '.format(ex)
+                LOGGER.exception(msg)
 
         ##################################
         ### set the output
