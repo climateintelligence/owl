@@ -284,7 +284,7 @@ class HWs_detection(Process):
         ##################################
         ### set the output
 
-        response.outputs["output"].file = fileout
+        response.outputs["heatwave_index"].file = fileout
 
         response.update_status('done.', 100)
         return response
