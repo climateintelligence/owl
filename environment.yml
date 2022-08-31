@@ -17,6 +17,9 @@ dependencies:
 - matplotlib
 # data analysis
 - netCDF4
+- joblib
+- xarray
+- scipy
+- scikit-learn
 # - python-cdo
 # - cdo # avoidable if possible
-- joblib

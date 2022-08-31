@@ -125,7 +125,7 @@ def stop():
 @click.option('--daemon', '-d', is_flag=True, help='run in daemon mode.')
 @click.option('--hostname', metavar='HOSTNAME', default='localhost', help='hostname in PyWPS configuration.')
 @click.option('--port', metavar='PORT', default='5000', help='port in PyWPS configuration.')
-@click.option('--maxsingleinputsize', default='2000mb', help='maxsingleinputsize in PyWPS configuration.')
+@click.option('--maxsingleinputsize', default='200000mb', help='maxsingleinputsize in PyWPS configuration.')
 @click.option('--maxprocesses', metavar='INT', default='10', help='maxprocesses in PyWPS configuration.')
 @click.option('--parallelprocesses', metavar='INT', default='2', help='parallelprocesses in PyWPS configuration.')
 @click.option('--log-level', metavar='LEVEL', default='INFO', help='log level in PyWPS configuration.')
