@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # Read data from an opendap server
 import netCDF4
-from cdo import *
+#from cdo import *
 import requests
 import numpy as np
 import numpy.ma as ma
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 # from function_read import *
-cdo = Cdo()
+#cdo = Cdo()
 import math
 from glob import glob
 from netCDF4 import num2date, date2num
@@ -274,8 +274,6 @@ def read_mask(url, lat_bnds, lon_bnds, mask):
     lat_bnds=np.array(lat_bnds)
     lon_bnds=np.array(lon_bnds)
 
-
-
     varlat=getvarlat(varf)
     varlon=getvarlon(varf)
     maskvar=getvarmask(varf)
@@ -529,198 +527,195 @@ def geturllistBSC(urlbase,forcastname,varname,dateformat):
     return(urllist)
 
 
-def ReadMFfor(forcastname, varname, sdatelst, nmon, lat_bnds, lon_bnds, areaav, mask, urlbase="", printurl=False, interp=False, grid="r360x180", level="all"):
-    nmod=1
-    imod=0
-
-    #read data gridto read the appropriate mask
-    dateformat0='{0.year:4d}{0.month:02d}'.format(sdatelst[0])
-    #sdatelst[0].strftime("%Y%m")
-    #urlbase='http://earth.bsc.es/thredds/dodsC/exp/'+forcastname+'/monthly_mean/'
-    urllist=geturllistBSC(urlbase,forcastname,varname,dateformat0)
-    if (varname=="tauu")&(len(urllist)==0):
-        varname="tauuo"
-        urllist=geturllistBSC(urlbase,forcastname,varname,dateformat0)
-
-    #print urlbase
-    url0=urllist[0]
-    if interp:
-        url0=cdo.remapbil(grid, input="-selvar,"+varname+" "+url0)
-
-    print(url0)
-    varf0 = netCDF4.Dataset(url0)
-
-
-    varlat=getvarlat(varf0)
-    varlon=getvarlon(varf0)
-    varens=getvarens(varf0)
-
-    #print varf0.variables.keys()
-
-    nlat = varf0.variables[varlat].shape[0]
-    nlon = varf0.variables[varlon].shape
-
-    #print nlat,nlon
-    if len(nlon)==2:
-        nlon=nlon[1]
-    else:
-        nlon=nlon[0]
-
-    try:
-        nmembmax = varf0.variables[varens].shape[0]
-    except:
-        nmembmax = 20
-    #print nmembmax
-
-    #read a test array to find if correponding to the mask
-    arraytest,lats_reg, lons_reg=extract_array(varf0, varname, nmon, lon_bnds, lat_bnds, level=level)
-    varf0.close()
-
-    #print nlon, nlat
-
-    nsdates=len(sdatelst)
-    #read land sea mask and define size of the matrix
-
-    dims_expend=[nmod, nsdates, nmembmax, nmon]
-
-    #maskurl="/esarchive/exp/ecearth/constant/land_sea_mask_%ix%i.nc"%(nlon, nlat)
-    #print(maskurl)
-    #lsmask, lats_reg_mask, lons_reg_mask=read_mask(maskurl, lat_bnds, lon_bnds, mask)
-    if len(arraytest.shape)==3:
-        nlat, nlon = arraytest[0,:,:].shape
-    #        lsmask=(arraytest[0,:,:]!=1e20)*1
-            #print lsmask
-    #        print "warning: size of the mask different of size of the array no mask is applied"
-    elif len(arraytest.shape)==4:
-        nlat, nlon= arraytest[0,0,:,:].shape
-    #    if (lsmask.shape)!=arraytest[0,0,:,:].shape:
-    #        lsmask=(arraytest[0,0,:,:]!=1e20)*1
-    #        print "warning: size of the mask different of size of the array no mask is applied"
-
-
-    #lsmaskMM=extend_table(lsmask, dims_expend)
-    lsmaskMM=ma.zeros((nmod, nsdates, nmembmax, nmon, nlat, nlon))+1
-    varMM=ma.zeros((nmod, nsdates, nmembmax, nmon, nlat, nlon))+1e20
-
-
-    for idate in range(nsdates):
-        sdate=sdatelst[idate]
-        #dateformat=sdate.strftime("%Y%m")
-        dateformat='{0.year:4d}{0.month:02d}'.format(sdate)
-        #url=url0.replace(dateformat0, dateformat)
-        #print(urlbase)
-        #print(dateformat)
-        urllist=geturllistBSC(urlbase,forcastname,varname,dateformat)
-        #print(urllist)
-        #print(urllist)
-        #loop over members, needed for unaggregated
-        for imemb,url in enumerate(urllist):
-            if printurl:
-                print(url)
-
-            if interp:
-                url=cdo.remapbil(grid, input=url)
-            varf = netCDF4.Dataset(url)
-            vararray,lats_reg, lons_reg = extract_array(varf, varname, nmon, lon_bnds, lat_bnds, level=level)
-            #print lats_reg
-            #print lons_reg
-
-            #print urllist
-            if len(urllist)>1:
-                #print url
-                #print varMM.shape
-                #print vararray.shape
-                #print imemb
-                vararray=vararray.squeeze()
-                if len(vararray.shape)==2:
-                    varMM[imod,idate,imemb,:,:]=vararray
-                elif len(vararray.shape)==3:
-                    varMM[imod,idate,imemb,:,:,:]=vararray
-
-        if len(urllist)==1:
-            #print varf.variables[varname].dimensions
-            #print getdimens(varf, varname)
-            #print str(varf.variables[varname].dimensions[1])==getdimens(varf, varname)
-            if str(varf.variables[varname].dimensions[1])==getdimens(varf, varname):
-                vararray=np.swapaxes(vararray,0,1)
-            nmembidate=vararray.shape[0]
-            if nmembidate!=nmembmax:
-                print("WARNING: number of member different for start date: "+dateformat)
-                print("%i members instead of %i"%(nmembidate,nmembmax))
-                nmembidate=min(nmembidate,nmembmax)
-            #print  varMM.shape,  vararray.shape
-            varMM[imod,idate,:nmembidate,:,:]=vararray[:nmembidate,:,:]
-
-    varMM.mask=1-lsmaskMM
-    #print lsmaskMM
-    if(areaav):
-        varMM=area_av(varMM, 4,5, lats_reg, lons_reg)
-        varMM.mask=varMM>1e19
-    #print(varMM.shape)
-    return(varMM,lats_reg, lons_reg)
-
-
-
-
-def ReadObs(varname, sdatelst, nmon, lat_bnds, lon_bnds, areaav, path, mask="oce", interp = False, grid="r360x180"):
-    """
-    """
-    a=(glob(path))
-    a.sort()
-
-    url=cdo.mergetime(input=" ".join(a))
-    if interp:
-        url=cdo.remapbil(grid, input=url)
-    print(url)
-    varf = netCDF4.Dataset(url)
-
-
-    varlat=getvarlat(varf)
-    varlon=getvarlon(varf)
-    lats = varf.variables[varlat][:]
-    lons = varf.variables[varlon][:]
-
-    lat_inds = np.where((lats > lat_bnds[0]) & (lats < lat_bnds[1]))[0]
-    lon_inds = lon_index(lons, lon_bnds)
-    #contruct index list corresponding to the forecast startdates
-
-    tname = "time"
-    nctime = varf.variables[tname][:] # get values
-    t_unit = varf.variables[tname].units # get unit  "days since 1950-01-01T00:00:00Z"
-    t_cal = varf.variables[tname].calendar
-    time = num2date(nctime,units = t_unit,calendar = t_cal)
-    #print time
-
-    forcastime=np.ndarray.flatten(np.transpose(np.array([sdatelst+relativedelta(months=m) for m in range(nmon)])))
-    #print [s for s in list(forcastime)]
-    #print forcastime
-    s = forcastime[0]
-    time = np.array([date(t.year, t.month, 1) for t in time])
-    #print time
-    forcastimeindex=np.array([np.where(time==date(s.year, s.month, 1))[0][0] for s in list(forcastime)])
-    sdmin=forcastimeindex.min()
-    sdmax=forcastimeindex.max()+1
-
-    #download data subset
-    #in case selection is over greenwitch selet 2subsets
-    if len(lon_inds)==2:
-        vararrayW=varf.variables[varname][sdmin:sdmax,lat_inds,lon_inds[0]][forcastimeindex-sdmin,:,:]
-        vararrayE=varf.variables[varname][sdmin:sdmax,lat_inds,lon_inds[1]][forcastimeindex-sdmin,:,:]
-        varobs=np.ma.concatenate((vararrayW, vararrayE), axis=2)
-        lons_regW=lons[lon_inds[0]]
-        lons_regE=lons[lon_inds[1]]
-        lons_reg=np.ma.concatenate((lons_regW, lons_regE), axis=0)
-    else:
-        varobs=varf.variables[varname][sdmin:sdmax,lat_inds,lon_inds[0]][forcastimeindex-sdmin,:,:]
-        lons_reg=lons[lon_inds[0]]
-
-    varf.close()
-    lats_reg=lats[lat_inds]
-
-    varobs.shape=(len(sdatelst), nmon, varobs.shape[1], varobs.shape[2])
-    varobs=ma.array(varobs, mask=varobs>1e20)
-
-    if(areaav):
-        varobs=area_av(varobs, 2, 3, lats_reg, lons_reg)
-
-    return(varobs, lats_reg, lons_reg)
+# def ReadMFfor(forcastname, varname, sdatelst, nmon, lat_bnds, lon_bnds, areaav, mask, urlbase="", printurl=False, interp=False, grid="r360x180", level="all"):
+#     nmod=1
+#     imod=0
+#
+#     #read data gridto read the appropriate mask
+#     dateformat0='{0.year:4d}{0.month:02d}'.format(sdatelst[0])
+#     #sdatelst[0].strftime("%Y%m")
+#     #urlbase='http://earth.bsc.es/thredds/dodsC/exp/'+forcastname+'/monthly_mean/'
+#     urllist=geturllistBSC(urlbase,forcastname,varname,dateformat0)
+#     if (varname=="tauu")&(len(urllist)==0):
+#         varname="tauuo"
+#         urllist=geturllistBSC(urlbase,forcastname,varname,dateformat0)
+#
+#     #print urlbase
+#     url0=urllist[0]
+#     if interp:
+#         url0=cdo.remapbil(grid, input="-selvar,"+varname+" "+url0)
+#
+#     print(url0)
+#     varf0 = netCDF4.Dataset(url0)
+#
+#
+#     varlat=getvarlat(varf0)
+#     varlon=getvarlon(varf0)
+#     varens=getvarens(varf0)
+#
+#     #print varf0.variables.keys()
+#
+#     nlat = varf0.variables[varlat].shape[0]
+#     nlon = varf0.variables[varlon].shape
+#
+#     #print nlat,nlon
+#     if len(nlon)==2:
+#         nlon=nlon[1]
+#     else:
+#         nlon=nlon[0]
+#
+#     try:
+#         nmembmax = varf0.variables[varens].shape[0]
+#     except:
+#         nmembmax = 20
+#     #print nmembmax
+#
+#     #read a test array to find if correponding to the mask
+#     arraytest,lats_reg, lons_reg=extract_array(varf0, varname, nmon, lon_bnds, lat_bnds, level=level)
+#     varf0.close()
+#
+#     #print nlon, nlat
+#
+#     nsdates=len(sdatelst)
+#     #read land sea mask and define size of the matrix
+#
+#     dims_expend=[nmod, nsdates, nmembmax, nmon]
+#
+#     #maskurl="/esarchive/exp/ecearth/constant/land_sea_mask_%ix%i.nc"%(nlon, nlat)
+#     #print(maskurl)
+#     #lsmask, lats_reg_mask, lons_reg_mask=read_mask(maskurl, lat_bnds, lon_bnds, mask)
+#     if len(arraytest.shape)==3:
+#         nlat, nlon = arraytest[0,:,:].shape
+#     #        lsmask=(arraytest[0,:,:]!=1e20)*1
+#             #print lsmask
+#     #        print "warning: size of the mask different of size of the array no mask is applied"
+#     elif len(arraytest.shape)==4:
+#         nlat, nlon= arraytest[0,0,:,:].shape
+#     #    if (lsmask.shape)!=arraytest[0,0,:,:].shape:
+#     #        lsmask=(arraytest[0,0,:,:]!=1e20)*1
+#     #        print "warning: size of the mask different of size of the array no mask is applied"
+#
+#
+#     #lsmaskMM=extend_table(lsmask, dims_expend)
+#     lsmaskMM=ma.zeros((nmod, nsdates, nmembmax, nmon, nlat, nlon))+1
+#     varMM=ma.zeros((nmod, nsdates, nmembmax, nmon, nlat, nlon))+1e20
+#
+#
+#     for idate in range(nsdates):
+#         sdate=sdatelst[idate]
+#         #dateformat=sdate.strftime("%Y%m")
+#         dateformat='{0.year:4d}{0.month:02d}'.format(sdate)
+#         #url=url0.replace(dateformat0, dateformat)
+#         #print(urlbase)
+#         #print(dateformat)
+#         urllist=geturllistBSC(urlbase,forcastname,varname,dateformat)
+#         #print(urllist)
+#         #print(urllist)
+#         #loop over members, needed for unaggregated
+#         for imemb,url in enumerate(urllist):
+#             if printurl:
+#                 print(url)
+#
+#             if interp:
+#                 url=cdo.remapbil(grid, input=url)
+#             varf = netCDF4.Dataset(url)
+#             vararray,lats_reg, lons_reg = extract_array(varf, varname, nmon, lon_bnds, lat_bnds, level=level)
+#             #print lats_reg
+#             #print lons_reg
+#
+#             #print urllist
+#             if len(urllist)>1:
+#                 #print url
+#                 #print varMM.shape
+#                 #print vararray.shape
+#                 #print imemb
+#                 vararray=vararray.squeeze()
+#                 if len(vararray.shape)==2:
+#                     varMM[imod,idate,imemb,:,:]=vararray
+#                 elif len(vararray.shape)==3:
+#                     varMM[imod,idate,imemb,:,:,:]=vararray
+#
+#         if len(urllist)==1:
+#             #print varf.variables[varname].dimensions
+#             #print getdimens(varf, varname)
+#             #print str(varf.variables[varname].dimensions[1])==getdimens(varf, varname)
+#             if str(varf.variables[varname].dimensions[1])==getdimens(varf, varname):
+#                 vararray=np.swapaxes(vararray,0,1)
+#             nmembidate=vararray.shape[0]
+#             if nmembidate!=nmembmax:
+#                 print("WARNING: number of member different for start date: "+dateformat)
+#                 print("%i members instead of %i"%(nmembidate,nmembmax))
+#                 nmembidate=min(nmembidate,nmembmax)
+#             #print  varMM.shape,  vararray.shape
+#             varMM[imod,idate,:nmembidate,:,:]=vararray[:nmembidate,:,:]
+#
+#     varMM.mask=1-lsmaskMM
+#     #print lsmaskMM
+#     if(areaav):
+#         varMM=area_av(varMM, 4,5, lats_reg, lons_reg)
+#         varMM.mask=varMM>1e19
+#     #print(varMM.shape)
+#     return(varMM,lats_reg, lons_reg)
+#
+# def ReadObs(varname, sdatelst, nmon, lat_bnds, lon_bnds, areaav, path, mask="oce", interp = False, grid="r360x180"):
+    # """
+    # """
+    # a=(glob(path))
+    # a.sort()
+    #
+    # url=cdo.mergetime(input=" ".join(a))
+    # if interp:
+    #     url=cdo.remapbil(grid, input=url)
+    # print(url)
+    # varf = netCDF4.Dataset(url)
+    #
+    #
+    # varlat=getvarlat(varf)
+    # varlon=getvarlon(varf)
+    # lats = varf.variables[varlat][:]
+    # lons = varf.variables[varlon][:]
+    #
+    # lat_inds = np.where((lats > lat_bnds[0]) & (lats < lat_bnds[1]))[0]
+    # lon_inds = lon_index(lons, lon_bnds)
+    # #contruct index list corresponding to the forecast startdates
+    #
+    # tname = "time"
+    # nctime = varf.variables[tname][:] # get values
+    # t_unit = varf.variables[tname].units # get unit  "days since 1950-01-01T00:00:00Z"
+    # t_cal = varf.variables[tname].calendar
+    # time = num2date(nctime,units = t_unit,calendar = t_cal)
+    # #print time
+    #
+    # forcastime=np.ndarray.flatten(np.transpose(np.array([sdatelst+relativedelta(months=m) for m in range(nmon)])))
+    # #print [s for s in list(forcastime)]
+    # #print forcastime
+    # s = forcastime[0]
+    # time = np.array([date(t.year, t.month, 1) for t in time])
+    # #print time
+    # forcastimeindex=np.array([np.where(time==date(s.year, s.month, 1))[0][0] for s in list(forcastime)])
+    # sdmin=forcastimeindex.min()
+    # sdmax=forcastimeindex.max()+1
+    #
+    # #download data subset
+    # #in case selection is over greenwitch selet 2subsets
+    # if len(lon_inds)==2:
+    #     vararrayW=varf.variables[varname][sdmin:sdmax,lat_inds,lon_inds[0]][forcastimeindex-sdmin,:,:]
+    #     vararrayE=varf.variables[varname][sdmin:sdmax,lat_inds,lon_inds[1]][forcastimeindex-sdmin,:,:]
+    #     varobs=np.ma.concatenate((vararrayW, vararrayE), axis=2)
+    #     lons_regW=lons[lon_inds[0]]
+    #     lons_regE=lons[lon_inds[1]]
+    #     lons_reg=np.ma.concatenate((lons_regW, lons_regE), axis=0)
+    # else:
+    #     varobs=varf.variables[varname][sdmin:sdmax,lat_inds,lon_inds[0]][forcastimeindex-sdmin,:,:]
+    #     lons_reg=lons[lon_inds[0]]
+    #
+    # varf.close()
+    # lats_reg=lats[lat_inds]
+    #
+    # varobs.shape=(len(sdatelst), nmon, varobs.shape[1], varobs.shape[2])
+    # varobs=ma.array(varobs, mask=varobs>1e20)
+    #
+    # if(areaav):
+    #     varobs=area_av(varobs, 2, 3, lats_reg, lons_reg)
+    #
+    # return(varobs, lats_reg, lons_reg)

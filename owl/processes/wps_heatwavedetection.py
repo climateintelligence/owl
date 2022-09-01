@@ -174,47 +174,58 @@ class HWs_detection(Process):
 
 ##################################################
 ### TODO: to be defined as input parameter #######
+        try:
+            # Season #
+            season='15MJJA'
+            season_start_day=[5,15]
+            season_start_day=[8,31]
 
-        # Season #
-        season='15MJJA'
-        season_start_day=[5,15]
-        season_start_day=[8,31]
+            # nday=109 #15 of May to 31st of Aug
+            nday=365
+            cv='CV'
+            cv_str = cv
+            var='t2m'
+            expname='ERA5'
+            memb_str='0' # there are not members for ERA5
+            nrealisation=1
 
-        # nday=109 #15 of May to 31st of Aug
-        nday=365
-        cv='CV'
-        cv_str = cv
-        var='t2m'
-        expname='ERA5'
-        memb_str='0' # there are not members for ERA5
-        nrealisation=1
+            lons_reg=np.arange(lons_bnds[0],lons_bnds[1]+0.25,0.25)
+            lats_reg=np.arange(lats_bnds[0],lats_bnds[1]+0.25,0.25)
+            nlon=len(lons_reg)
+            nlat=len(lats_reg)
 
-        lons_reg=np.arange(lons_bnds[0],lons_bnds[1]+0.25,0.25)
-        lats_reg=np.arange(lats_bnds[0],lats_bnds[1]+0.25,0.25)
-        nlon=len(lons_reg)
-        nlat=len(lats_reg)
+            data=np.zeros((nlon,nlat,nyear,nday,1)) # daily data for all the years
+            LOGGER.info('Setting default values ')
+        except Exception as ex:
+            msg = 'FAILED to set default values: {} '.format(ex)
+            LOGGER.exception(msg)
 
-        data=np.zeros((nlon,nlat,nyear,nday,1)) # daily data for all the years
+        try:
+            for iyear,year in enumerate(range(ref_year1,ref_year2+1)):
+                days_may=np.linspace(15, 31, num=17)
+                obs1=xr.open_dataset(dataset)
+                # selecting BBox:
+                obs1 = obs1.sel(latitude=slice(lats_bnds[1],lats_bnds[0]),longitude=slice(lons_bnds[0],lons_bnds[1]))
+                # selecting time and bbox
+                obs=obs1.sel(time=obs1.time.time.dt.year.isin(year))
+                obs = obs.sel(time=~((obs.time.dt.month == 2) & (obs.time.dt.day == 29)))
+                data[:,:,iyear,:,0]=np.transpose(obs.to_array()[0,:,:,:],[2,1,0])
 
-        for iyear,year in enumerate(range(ref_year1,ref_year2+1)):
-            days_may=np.linspace(15, 31, num=17)
-            obs1=xr.open_dataset(dataset)
-            # selecting BBox:
-            obs1 = obs1.sel(latitude=slice(lats_bnds[1],lats_bnds[0]),longitude=slice(lons_bnds[0],lons_bnds[1]))
-            # selecting time and bbox
-            obs=obs1.sel(time=obs1.time.time.dt.year.isin(year))
-            obs = obs.sel(time=~((obs.time.dt.month == 2) & (obs.time.dt.day == 29)))
-            data[:,:,iyear,:,0]=np.transpose(obs.to_array()[0,:,:,:],[2,1,0])
+            nmemb=data.shape[4]
+            ndayseas = nday//duration_min +1
+            HWMI = np.zeros((nyear,nmemb,nlat,nlon))
+            ndayexedthreshold = np.zeros((nyear,nmemb,nlat,nlon))
+            subHWarray = np.zeros((nyear, ndayseas, nmemb, nlat, nlon))
+            #HW = np.zeros((nyear,nmemb,nday,nlat,nlon))
+            DDthreshold = np.zeros((nyear,nmemb,nlat,nlon))
+            fitsubHWarray = np.zeros((nyear, ndayseas, nmemb, nlat, nlon))
+            impossible_fit_list = []
 
-        nmemb=data.shape[4]
-        ndayseas = nday//duration_min +1
-        HWMI = np.zeros((nyear,nmemb,nlat,nlon))
-        ndayexedthreshold = np.zeros((nyear,nmemb,nlat,nlon))
-        subHWarray = np.zeros((nyear, ndayseas, nmemb, nlat, nlon))
-        #HW = np.zeros((nyear,nmemb,nday,nlat,nlon))
-        DDthreshold = np.zeros((nyear,nmemb,nlat,nlon))
-        fitsubHWarray = np.zeros((nyear, ndayseas, nmemb, nlat, nlon))
-        impossible_fit_list = []
+            LOGGER.info('Open input file and read in values ')
+        except Exception as ex:
+            msg = 'FAILED open input file and read in values: {} '.format(ex)
+            LOGGER.exception(msg)
+
 
         ### To be moved into owl.HMWI ?
         def parallelized_HWMIs_computation(ilat, ilon):    #, HWMI, ndayexedthreshold, DDthreshold, fitsubHWarray, subHWarray):
@@ -229,14 +240,18 @@ class HWs_detection(Process):
                 impossible_fit_list.append((impossible_fit,ilat,ilon))
                 return()
 
-        # ##################################
-        # ### execute the Heatwave Detection
+        try:
+            # ##################################
+            # ### execute the Heatwave Detection
+            Parallel(n_jobs=-1, timeout = 5*3600, verbose = 20, require='sharedmem', mmap_mode='w+')(delayed(parallelized_HWMIs_computation)(ilat, ilon) for ilat in range(nlat) for ilon in range(nlon))
 
-        Parallel(n_jobs=-1, timeout = 5*3600, verbose = 20, require='sharedmem', mmap_mode='w+')(delayed(parallelized_HWMIs_computation)(ilat, ilon) for ilat in range(nlat) for ilon in range(nlon))
+            LOGGER.info('*** Sucessfully executed the Heatwave detection ')
+        except Exception as ex:
+            msg = 'FAILED to execut the Heatwave detection: {} '.format(ex)
+            LOGGER.exception(msg)
 
         # ##################################
         # ### write out the values into the output file
-
         years=range(ref_year1,ref_year2)
         j=0
         for i,iyear in enumerate(range(ref_year1, ref_year2+1)):
