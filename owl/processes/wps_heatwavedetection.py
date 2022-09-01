@@ -92,15 +92,14 @@ class HWs_detection(Process):
             version="0.1.0",
             abstract="AI-enhanced climate service to detect Heatwaves in climate datasets.", # more explaionation is useful here
             metadata=[
-                Metadata(
-                    title="HW Detection",
+                Metadata(title="HW Detection",
                     # href="https://github.com/FREVA-CLINT/duck/raw/main/docs/source/_static/crai_logo.png",
                     # role=MEDIA_ROLE),
-                    Metadata('Clint Project', 'https://climateintelligence.eu/'),
-                    Metadata('CMCC','https://www.cmcc.it'),
-                    # Metadata('Near Surface Air Temperature',
-                    #          'https://www.atlas.impact2c.eu/en/climate/temperature/?parent_id=22'),
-                    )
+                    ),
+                Metadata('Clint Project', 'https://climateintelligence.eu/'),
+                Metadata('CMCC','https://www.cmcc.it'),
+                # Metadata('Near Surface Air Temperature',
+                #          'https://www.atlas.impact2c.eu/en/climate/temperature/?parent_id=22'),
             ],
             inputs=inputs,
             outputs=outputs,
@@ -344,7 +343,7 @@ class HWs_detection(Process):
         ### set the output
 
         response.outputs["heatwave_index"].file = fileout
-        response.outputs["logfile"].file = fileout
+        # response.outputs["logfile"].file = fileout
 
         response.update_status('done.', 100)
         return response
