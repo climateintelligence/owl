@@ -42,6 +42,24 @@ class HWs_detection(Process):
                                         'austral_ocean', 'tropical_atlantic', 'tropical_pacific', 'mediterranee'],
                          default='test'),
 
+            LiteralInput('ref_start', 'Start reference period', data_type='date',
+                         abstract='Enter a date like 2012-12-31',
+                         default='2015-01-01'),
+
+            LiteralInput('ref_end', 'End reference period', data_type='date',
+                         abstract='Enter a date like 2012-12-31',
+                         default='2017-01-01'),
+
+            LiteralInput('duration_min', 'min HW Duration', data_type='integer',
+                         abstract='Choose an integer number from allowed values.',
+                         default="3",
+                         allowed_values=[1, 2, 3, 4, 5]),
+
+            LiteralInput('percent_thresh', 'Percent Threshold ', data_type='integer',
+                         abstract='Choose an integer number from allowed values.',
+                         default="90",
+                         allowed_values=[90,91,92,93,94,95,96,97,99]),
+
             # LiteralInput('name', 'Your name',
             #              abstract='Please enter your name.',
             #              keywords=['name', 'firstname'],
@@ -54,10 +72,16 @@ class HWs_detection(Process):
                           abstract='netCDF containing a Heatwave index ... and more description',
                           as_reference=True,
                           supported_formats=[FORMATS.NETCDF]),
+
             # ComplexOutput('plot', 'Graphical visualisation of the Heatwave',
-                          # # abstract='Plot of original input file. First timestep.',
-                          # as_reference=True,
-                          # supported_formats=[FORMAT_PNG]),
+            #               # abstract='Plot of original input file. First timestep.',
+            #               as_reference=True,
+            #               supported_formats=[FORMAT_PNG]),
+
+            # ComplexOutput('logfile', 'textfile containing logging information of process performance',
+            #               abstract='textfile containing logging information of process performance',
+            #               as_reference=True,
+            #               supported_formats=[FORMATS.TEXT]),
                           ]
 
 
@@ -66,20 +90,16 @@ class HWs_detection(Process):
             identifier="HWs_detection",
             title="HWs_detection",
             version="0.1.0",
-            abstract="AI-enhanced climate service to detect Heatwaves in climate datasets.",
+            abstract="AI-enhanced climate service to detect Heatwaves in climate datasets.", # more explaionation is useful here
             metadata=[
-                Metadata(
-                    title="HW Detection",
+                Metadata(title="HW Detection",
                     # href="https://github.com/FREVA-CLINT/duck/raw/main/docs/source/_static/crai_logo.png",
                     # role=MEDIA_ROLE),
-                    # Metadata('CRAI', 'https://github.com/FREVA-CLINT/climatereconstructionAI'),
-                    # Metadata('Clint Project', 'https://climateintelligence.eu/'),
-                    # Metadata('HadCRUT on Wikipedia', 'https://en.wikipedia.org/wiki/HadCRUT'),
-                    # Metadata('HadCRUT4', 'https://www.metoffice.gov.uk/hadobs/hadcrut4/'),
-                    # Metadata('HadCRUT5', 'https://www.metoffice.gov.uk/hadobs/hadcrut5/'),
-                    # Metadata('Near Surface Air Temperature',
-                    #          'https://www.atlas.impact2c.eu/en/climate/temperature/?parent_id=22'),
-                    )
+                    ),
+                Metadata('Clint Project', 'https://climateintelligence.eu/'),
+                Metadata('CMCC','https://www.cmcc.it'),
+                # Metadata('Near Surface Air Temperature',
+                #          'https://www.atlas.impact2c.eu/en/climate/temperature/?parent_id=22'),
             ],
             inputs=inputs,
             outputs=outputs,
@@ -88,104 +108,123 @@ class HWs_detection(Process):
         )
 
     def _handler(self, request, response):
-        ######################################
-        # import required libraries
 
         #####################################
         ### read the values of the inputs
-        dataset = request.inputs['dataset'][0].file
-        reg_name = request.inputs['reg_name'][0].data
-        response.update_status('Prepare dataset ...', 0)
-        workdir = Path(self.workdir)
+        try:
+            response.update_status('*** START running the process ***', 0)
+            dataset = request.inputs['dataset'][0].file
+            reg_name = request.inputs['reg_name'][0].data
+
+            ### reference period
+            ref_start = request.inputs['ref_start'][0].data
+            ref_end = request.inputs['ref_end'][0].data
+            ref_year1 = ref_start.year
+            ref_year2 = ref_end.year
+            nyear=len(range(ref_year1,ref_year2))+1
+            ### MINIMAL DURATION OF A HW
+            duration_min = request.inputs['duration_min'][0].data
+            ### PERCENTILE THRESHOLD
+            percent_thresh = request.inputs['percent_thresh'][0].data
+
+            ### set working directory
+            workdir = Path(self.workdir)
+            LOGGER.info('Get parameter values')
+        except Exception as ex:
+            msg = 'FAILED get parameter values: {} '.format(ex)
+            LOGGER.exception(msg)
 
         #####################################
         ### REGION OF EXPERIENCE
-        if reg_name == 'north_pacific':
-            lats_bnds = np.array([30,65])
-            lons_bnds = np.array([120, -120])
-        elif reg_name == 'north_atlantic':
-            lats_bnds = np.array([30,65])
-            lons_bnds = np.array([-80, 0])
-        elif reg_name == 'indian_ocean':
-            lats_bnds = np.array([-30,30])
-            lons_bnds = np.array([45, 110])
-        elif reg_name == 'austral_ocean':
-            lats_bnds = np.array([-90,-30])
-            lons_bnds = np.array([-180, 180])
-        elif reg_name == 'tropical_atlantic':
-            lats_bnds = np.array([-30,30])
-            lons_bnds = np.array([-70, 20])
-        elif reg_name == 'tropical_pacific':
-            lats_bnds = np.array([-30,30])
-            lons_bnds = np.array([120, -70])
-        elif reg_name == 'mediterranee':
-            lats_bnds = np.array([30,50])
-            lons_bnds = np.array([-5, 40])
-        elif reg_name == 'global':
-            lats_bnds = np.array([-90,90])
-            lons_bnds = np.array([-180,180])
-        elif reg_name == 'test':
-            lats_bnds = np.array([40,50])
-            lons_bnds = np.array([10,20])
-        else:
-            raise Exception('not regeion detected')
+        try:
+            if reg_name == 'north_pacific':
+                lats_bnds = np.array([30,65])
+                lons_bnds = np.array([120, -120])
+            elif reg_name == 'north_atlantic':
+                lats_bnds = np.array([30,65])
+                lons_bnds = np.array([-80, 0])
+            elif reg_name == 'indian_ocean':
+                lats_bnds = np.array([-30,30])
+                lons_bnds = np.array([45, 110])
+            elif reg_name == 'austral_ocean':
+                lats_bnds = np.array([-90,-30])
+                lons_bnds = np.array([-180, 180])
+            elif reg_name == 'tropical_atlantic':
+                lats_bnds = np.array([-30,30])
+                lons_bnds = np.array([-70, 20])
+            elif reg_name == 'tropical_pacific':
+                lats_bnds = np.array([-30,30])
+                lons_bnds = np.array([120, -70])
+            elif reg_name == 'mediterranee':
+                lats_bnds = np.array([30,50])
+                lons_bnds = np.array([-5, 40])
+            elif reg_name == 'global':
+                lats_bnds = np.array([-90,90])
+                lons_bnds = np.array([-180,180])
+            elif reg_name == 'test':
+                lats_bnds = np.array([40,50])
+                lons_bnds = np.array([10,20])
+            else:
+                raise Exception('not regeion detected')
+            LOGGER.info('Set coordinates for regions')
+        except Exception as ex:
+            msg = 'FAILED to set coordinates for regions: {} '.format(ex)
+            LOGGER.exception(msg)
 
 ##################################################
 ### TODO: to be defined as input parameter #######
+        try:
+            # Season #
+            season='15MJJA'
+            season_start_day=[5,15]
+            season_start_day=[8,31]
 
-        var='t2m'
-        expname='ERA5'
-        memb_str='0' # there are not members for ERA5
-        nrealisation=1
+            # nday=109 #15 of May to 31st of Aug
+            nday=365
+            cv='CV'
+            cv_str = cv
+            var='t2m'
+            expname='ERA5'
+            memb_str='0' # there are not members for ERA5
+            nrealisation=1
 
-        # Season #
-        season='15MJJA'
-        season_start_day=[5,15]
-        season_start_day=[8,31]
+            lons_reg=np.arange(lons_bnds[0],lons_bnds[1]+0.25,0.25)
+            lats_reg=np.arange(lats_bnds[0],lats_bnds[1]+0.25,0.25)
+            nlon=len(lons_reg)
+            nlat=len(lats_reg)
 
-        # nday=109 #15 of May to 31st of Aug
-        nday=365
-        #nday = 109*3
-        # Period #
-        ref_year1=2015
-        ref_year2=2017
-        nyear=len(range(ref_year1,ref_year2))+1
+            data=np.zeros((nlon,nlat,nyear,nday,1)) # daily data for all the years
+            LOGGER.info('Setting default values ')
+        except Exception as ex:
+            msg = 'FAILED to set default values: {} '.format(ex)
+            LOGGER.exception(msg)
 
-        ### PERCENTILE THRESHOLD
-        #percent_thresh = 95
-        percent_thresh = 90
-        cv='CV'
-        cv_str = cv
-        ### MINIMAL DURATION OF A HW
-        #duration_min = 5
-        duration_min = 3
+        try:
+            for iyear,year in enumerate(range(ref_year1,ref_year2+1)):
+                days_may=np.linspace(15, 31, num=17)
+                obs1=xr.open_dataset(dataset)
+                # selecting BBox:
+                obs1 = obs1.sel(latitude=slice(lats_bnds[1],lats_bnds[0]),longitude=slice(lons_bnds[0],lons_bnds[1]))
+                # selecting time and bbox
+                obs=obs1.sel(time=obs1.time.time.dt.year.isin(year))
+                obs = obs.sel(time=~((obs.time.dt.month == 2) & (obs.time.dt.day == 29)))
+                data[:,:,iyear,:,0]=np.transpose(obs.to_array()[0,:,:,:],[2,1,0])
 
-        lons_reg=np.arange(lons_bnds[0],lons_bnds[1]+0.25,0.25)
-        lats_reg=np.arange(lats_bnds[0],lats_bnds[1]+0.25,0.25)
-        nlon=len(lons_reg)
-        nlat=len(lats_reg)
+            nmemb=data.shape[4]
+            ndayseas = nday//duration_min +1
+            HWMI = np.zeros((nyear,nmemb,nlat,nlon))
+            ndayexedthreshold = np.zeros((nyear,nmemb,nlat,nlon))
+            subHWarray = np.zeros((nyear, ndayseas, nmemb, nlat, nlon))
+            #HW = np.zeros((nyear,nmemb,nday,nlat,nlon))
+            DDthreshold = np.zeros((nyear,nmemb,nlat,nlon))
+            fitsubHWarray = np.zeros((nyear, ndayseas, nmemb, nlat, nlon))
+            impossible_fit_list = []
 
-        data=np.zeros((nlon,nlat,nyear,nday,1)) # daily data for all the years
+            LOGGER.info('Open input file and read in values ')
+        except Exception as ex:
+            msg = 'FAILED open input file and read in values: {} '.format(ex)
+            LOGGER.exception(msg)
 
-        for iyear,year in enumerate(range(ref_year1,ref_year2+1)):
-            days_may=np.linspace(15, 31, num=17)
-            obs1=xr.open_dataset(dataset)
-            # selecting BBox:
-            obs1 = obs1.sel(latitude=slice(lats_bnds[1],lats_bnds[0]),longitude=slice(lons_bnds[0],lons_bnds[1]))
-            # selecting time and bbox
-            obs=obs1.sel(time=obs1.time.time.dt.year.isin(year))
-            obs = obs.sel(time=~((obs.time.dt.month == 2) & (obs.time.dt.day == 29)))
-            data[:,:,iyear,:,0]=np.transpose(obs.to_array()[0,:,:,:],[2,1,0])
-
-        nmemb=data.shape[4]
-        ndayseas = nday//duration_min +1
-        HWMI = np.zeros((nyear,nmemb,nlat,nlon))
-        ndayexedthreshold = np.zeros((nyear,nmemb,nlat,nlon))
-        subHWarray = np.zeros((nyear, ndayseas, nmemb, nlat, nlon))
-        #HW = np.zeros((nyear,nmemb,nday,nlat,nlon))
-        DDthreshold = np.zeros((nyear,nmemb,nlat,nlon))
-        fitsubHWarray = np.zeros((nyear, ndayseas, nmemb, nlat, nlon))
-        impossible_fit_list = []
 
         ### To be moved into owl.HMWI ?
         def parallelized_HWMIs_computation(ilat, ilon):    #, HWMI, ndayexedthreshold, DDthreshold, fitsubHWarray, subHWarray):
@@ -200,33 +239,46 @@ class HWs_detection(Process):
                 impossible_fit_list.append((impossible_fit,ilat,ilon))
                 return()
 
-        # ##################################
-        # ### execute the Heatwave Detection
+        try:
+            # ##################################
+            # ### execute the Heatwave Detection
+            Parallel(n_jobs=-1, timeout = 5*3600, verbose = 20, require='sharedmem', mmap_mode='w+')(delayed(parallelized_HWMIs_computation)(ilat, ilon) for ilat in range(nlat) for ilon in range(nlon))
 
-        Parallel(n_jobs=-1, timeout = 5*3600, verbose = 20, require='sharedmem', mmap_mode='w+')(delayed(parallelized_HWMIs_computation)(ilat, ilon) for ilat in range(nlat) for ilon in range(nlon))
+            LOGGER.info('*** Sucessfully executed the Heatwave detection ')
+        except Exception as ex:
+            msg = 'FAILED to execut the Heatwave detection: {} '.format(ex)
+            LOGGER.exception(msg)
 
         # ##################################
         # ### write out the values into the output file
-
         years=range(ref_year1,ref_year2)
         j=0
         for i,iyear in enumerate(range(ref_year1, ref_year2+1)):
             #print iyear
-            parameters_str = reg_name+"_"+season+"_"+cv_str+'_percent%i'%(percent_thresh)+'_daymin%i'%(duration_min)+"_ref_"+str(ref_year1)+"_"+str(ref_year2)+"_year_"+str(iyear)
-            varout1 = "HWMI"+"_"+var+"_"+parameters_str
-            vout1="HWMI"+"_"+var
-            fileout = tempfile.mktemp(suffix='.nc', prefix='heatwaveindex_', dir=workdir)
-            # fileout=workdir+varout1+".nc" #0%i01, monstart)
+            try:
+                parameters_str = reg_name+"_"+season+"_"+cv_str+'_percent%i'%(percent_thresh)+'_daymin%i'%(duration_min)+"_ref_"+str(ref_year1)+"_"+str(ref_year2)+"_year_"+str(iyear)
+                varout1 = "HWMI"+"_"+var+"_"+parameters_str
+                vout1="HWMI"+"_"+var
+                fileout = tempfile.mktemp(suffix='.nc', prefix='heatwaveindex_', dir=workdir)
+                fout=Dataset(fileout, "w")
 
-            # if len(glob(fileout))==1:
-            #     os.remove(fileout)
-            fout=Dataset(fileout, "w")
-            #fin=Dataset(targetflst[iyear])
-            lat = fout.createDimension('lat', nlat)
-            lon = fout.createDimension('lon', nlon)
-            rea = fout.createDimension('realisation', nrealisation)
-            latitudes = fout.createVariable('lat', np.float32, ('lat',))
-            longitudes = fout.createVariable('lon', np.float32,  ('lon',))
+                LOGGER.info('prepare empty netCDF dataset')
+            except Exception as ex:
+                msg = 'FAILED to prepare empty netCDF dataset: {} '.format(ex)
+                LOGGER.exception(msg)
+
+            try:
+                #fin=Dataset(targetflst[iyear])
+                lat = fout.createDimension('lat', nlat)
+                lon = fout.createDimension('lon', nlon)
+                rea = fout.createDimension('realisation', nrealisation)
+                latitudes = fout.createVariable('lat', np.float32, ('lat',))
+                longitudes = fout.createVariable('lon', np.float32,  ('lon',))
+
+                LOGGER.info('create dimensions in NetCDF file')
+            except Exception as ex:
+                msg = 'FAILED to create dimensions in NetCDF file: {} '.format(ex)
+                LOGGER.exception(msg)
 
             # Time variable
             try:
@@ -260,6 +312,12 @@ class HWs_detection(Process):
                 expercentfile = fout.createVariable("nbdaygtpercentpct_"+var, np.float32, ('time','realisation','lat','lon'))
                 expercentfile.units = 'Number of days'
 
+                LOGGER.info('Values for dimension filled')
+            except Exception as ex:
+                msg = 'FAILED to write values for dimension: {} '.format(ex)
+                LOGGER.exception(msg)
+
+            try:
                 # Write the HWMI variable
                 HWMIaux=HWMI[i:i+1,0:1,:,:]
                 HWMIfile[0:1,0:1,:,:]=HWMIaux
@@ -285,6 +343,7 @@ class HWs_detection(Process):
         ### set the output
 
         response.outputs["heatwave_index"].file = fileout
+        # response.outputs["logfile"].file = fileout
 
         response.update_status('done.', 100)
         return response
