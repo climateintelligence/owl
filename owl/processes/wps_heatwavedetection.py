@@ -242,8 +242,10 @@ class HWs_detection(Process):
         try:
             # ##################################
             # ### execute the Heatwave Detection
-            Parallel(n_jobs=-1, timeout = 5*3600, verbose = 20, require='sharedmem', mmap_mode='w+')(delayed(parallelized_HWMIs_computation)(ilat, ilon) for ilat in range(nlat) for ilon in range(nlon))
-
+            #Parallel(n_jobs=-1, timeout = 5*3600, verbose = 20, require='sharedmem', mmap_mode='w+')(delayed(parallelized_HWMIs_computation)(ilat, ilon) for ilat in range(nlat) for ilon in range(nlon))
+            for ilon in range(nlon):
+                for ilat in range(nlat):
+                    parallelized_HWMIs_computation(ilat, ilon) 
             LOGGER.info('*** Sucessfully executed the Heatwave detection ')
         except Exception as ex:
             msg = 'FAILED to execut the Heatwave detection: {} '.format(ex)
