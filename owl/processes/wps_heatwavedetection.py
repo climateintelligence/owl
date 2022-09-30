@@ -1,7 +1,7 @@
 # libraries for data analysis
 from pathlib import Path
 # libraries for service perfomance
-from pywps import Process, FORMATS, LiteralInput, LiteralOutput, UOM, ComplexInput, ComplexOutput
+from pywps import Process, FORMATS, LiteralInput, LiteralOutput, UOM, ComplexInput, ComplexOutput, Format
 from pywps.app.Common import Metadata
 
 # initialize logging:
@@ -16,8 +16,15 @@ import xarray as xr
 from joblib import Parallel, delayed
 import joblib
 import time
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
 from netCDF4 import num2date, date2num, Dataset
 from owl.HWMI import calc_HWMIyear
+
+import matplotlib
+matplotlib.use('Agg')
+
+FORMAT_PNG = Format("image/png", extension=".png", encoding="base64")
 
 # Process discription
 class HWs_detection(Process):
@@ -73,10 +80,10 @@ class HWs_detection(Process):
                           as_reference=True,
                           supported_formats=[FORMATS.NETCDF]),
 
-            # ComplexOutput('plot', 'Graphical visualisation of the Heatwave',
-            #               # abstract='Plot of original input file. First timestep.',
-            #               as_reference=True,
-            #               supported_formats=[FORMAT_PNG]),
+            ComplexOutput('plot', 'Graphical visualisation of the Heatwave',
+                          # abstract='Plot of original input file. First timestep.',
+                          as_reference=True,
+                          supported_formats=[FORMAT_PNG]),
 
             # ComplexOutput('logfile', 'textfile containing logging information of process performance',
             #               abstract='textfile containing logging information of process performance',
@@ -332,6 +339,7 @@ class HWs_detection(Process):
                 msg = 'FAILED to write values into netCDF: {} '.format(ex)
                 LOGGER.exception(msg)
 
+
             # Write the DDthreshold
             #DDthresholdfile=DDthreshold
             try:
@@ -341,11 +349,48 @@ class HWs_detection(Process):
                 msg = 'FAILED to close netCDF output file : {} '.format(ex)
                 LOGGER.exception(msg)
 
+
+        ##################################
+        ### produce graphics
+
+            try:
+                
+                plotout = tempfile.mktemp(suffix='.png', prefix='heatwaveindex_', dir=workdir)
+                LOGGER.info('prepare empty png file')
+            except Exception as ex:
+                msg = 'FAILED to prepare empty png file: {} '.format(ex)
+                LOGGER.exception(msg)
+
+            try:
+                #create plot
+                fig = plt.figure()
+                fig.set_size_inches(15, 10)
+                ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=0))
+                #ax.add_geometries(continents, ccrs.PlateCarree(), edgecolor='black', facecolor='#D6CFC7')
+                data = plt.contourf(np.squeeze(lons_reg), np.squeeze(lats_reg), np.squeeze(HWMIaux[0,0,:,:]), levels=np.linspace(0,5,11),
+                                        transform=ccrs.PlateCarree(), cmap='jet')
+                cb = fig.colorbar(data, orientation='horizontal',ax=ax,shrink=.8 )
+                cb.ax.xaxis.set_label_position('top')
+                    
+                gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                                      linewidth=1.5, color='grey', alpha=0.3, linestyle='--')
+                gl.top_labels = False
+                gl.left_labels = True
+                gl.xlines = False
+
+                plt.title('HWMI ERA5')
+                plt.savefig(plotout)
+                LOGGER.info('Plot created')
+            except Exception as ex:
+                msg = 'FAILED to create plot : {} '.format(ex)
+                LOGGER.exception(msg)
+
         ##################################
         ### set the output
 
         response.outputs["heatwave_index"].file = fileout
         # response.outputs["logfile"].file = fileout
+        response.outputs["plot"].file = plotout
 
         response.update_status('done.', 100)
         return response
