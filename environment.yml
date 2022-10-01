@@ -15,6 +15,7 @@ dependencies:
 # - cdsapi
 # visualisation
 - matplotlib
+- cartopy
 # data analysis
 - netCDF4
 - joblib
