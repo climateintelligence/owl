@@ -76,7 +76,8 @@ class HWs_detection(Process):
             ]
 
         outputs = [
-            ComplexOutput('heatwave_index', 'netCDF containing a Heatwave index',
+            # ComplexOutput('heatwave_index', 'netCDF containing a Heatwave index',
+            ComplexOutput('output', 'netCDF containing a Heatwave index',
                           abstract='netCDF containing a Heatwave index ... and more description',
                           as_reference=True,
                           supported_formats=[FORMATS.NETCDF]),
