@@ -82,7 +82,7 @@ class HWs_detection(Process):
                           as_reference=True,
                           supported_formats=[FORMATS.NETCDF]),
 
-            ComplexOutput('plot', 'Graphical visualisation of the Heatwave',
+            ComplexOutput('plot', 'Preview: Graphical visualisation of the Heatwave',
                           # abstract='Plot of original input file. First timestep.',
                           as_reference=True,
                           supported_formats=[FORMAT_PNG]),
