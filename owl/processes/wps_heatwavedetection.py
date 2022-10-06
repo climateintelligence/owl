@@ -390,7 +390,8 @@ class HWs_detection(Process):
         ##################################
         ### set the output
 
-        response.outputs["heatwave_index"].file = fileout
+        # response.outputs["heatwave_index"].file = fileout
+        response.outputs["output"].file = fileout
         # response.outputs["logfile"].file = fileout
         response.outputs["plot"].file = plotout
 
