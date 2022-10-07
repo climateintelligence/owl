@@ -41,6 +41,7 @@ class HWs_detection(Process):
                                   # "https://www.metoffice.gov.uk/hadobs/hadcrut5/data/current/non-infilled/HadCRUT.5.0.1.0.anomalies.ensemble_mean.nc",  # noqa
                          min_occurs=1,
                          max_occurs=1,
+                         default='https://nextcloud.dkrz.de/s/r2rwgGDxejq35iz/download',
                          supported_formats=[FORMATS.NETCDF, FORMATS.ZIP]),
 
             LiteralInput('reg_name', 'Region Name', data_type='string',
@@ -252,7 +253,7 @@ class HWs_detection(Process):
             #Parallel(n_jobs=-1, timeout = 5*3600, verbose = 20, require='sharedmem', mmap_mode='w+')(delayed(parallelized_HWMIs_computation)(ilat, ilon) for ilat in range(nlat) for ilon in range(nlon))
             for ilon in range(nlon):
                 for ilat in range(nlat):
-                    parallelized_HWMIs_computation(ilat, ilon) 
+                    parallelized_HWMIs_computation(ilat, ilon)
             LOGGER.info('*** Sucessfully executed the Heatwave detection ')
         except Exception as ex:
             msg = 'FAILED to execut the Heatwave detection: {} '.format(ex)
@@ -354,7 +355,7 @@ class HWs_detection(Process):
         ### produce graphics
 
             try:
-                
+
                 plotout = tempfile.mktemp(suffix='.png', prefix='heatwaveindex_', dir=workdir)
                 LOGGER.info('prepare empty png file')
             except Exception as ex:
@@ -371,7 +372,7 @@ class HWs_detection(Process):
                                         transform=ccrs.PlateCarree(), cmap='jet')
                 cb = fig.colorbar(data, orientation='horizontal',ax=ax,shrink=.8 )
                 cb.ax.xaxis.set_label_position('top')
-                    
+
                 gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
                                       linewidth=1.5, color='grey', alpha=0.3, linestyle='--')
                 gl.top_labels = False
