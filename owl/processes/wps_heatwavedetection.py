@@ -76,12 +76,13 @@ class HWs_detection(Process):
             ]
 
         outputs = [
-            ComplexOutput('heatwave_index', 'netCDF containing a Heatwave index',
+            # ComplexOutput('heatwave_index', 'netCDF containing a Heatwave index',
+            ComplexOutput('output', 'netCDF containing a Heatwave index',
                           abstract='netCDF containing a Heatwave index ... and more description',
                           as_reference=True,
                           supported_formats=[FORMATS.NETCDF]),
 
-            ComplexOutput('plot', 'Graphical visualisation of the Heatwave',
+            ComplexOutput('plot', 'Preview: Graphical visualisation of the Heatwave',
                           # abstract='Plot of original input file. First timestep.',
                           as_reference=True,
                           supported_formats=[FORMAT_PNG]),
@@ -389,7 +390,8 @@ class HWs_detection(Process):
         ##################################
         ### set the output
 
-        response.outputs["heatwave_index"].file = fileout
+        # response.outputs["heatwave_index"].file = fileout
+        response.outputs["output"].file = fileout
         # response.outputs["logfile"].file = fileout
         response.outputs["plot"].file = plotout
 
