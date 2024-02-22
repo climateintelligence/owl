@@ -2,3 +2,10 @@ click
 jinja2
 psutil
 pywps>=4.5.2,<4.7
+matplotlib
+cartopy
+netCDF4
+joblib
+xarray
+scipy
+scikit-learn
