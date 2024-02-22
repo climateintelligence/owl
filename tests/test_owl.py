@@ -4,10 +4,10 @@
 
 import pytest
 
-from click.testing import CliRunner
+# from click.testing import CliRunner
 
-import owl
-from owl import cli
+# import owl
+# from owl import cli
 
 
 @pytest.fixture
