@@ -266,5 +266,19 @@ def calc_HWMIyear(target, climyears, years, cross_valid, percent_thresh, duratio
         HWMIyear.append(HWMI)
         HWlstyear.append(HWlstfit)
         fitsubHWarrayyear[iyear, :, :] = fitsubHWarray
-        
-    return(HWMIyear, HWlstyear, HWstartmembyear, HWendmembyear, ndaysexed_percentile, DD_threshold, subHWarrayyear, fitsubHWarrayyear, sstMeanarrayyear, count_impossible_fit, perc_thresh_clim[0], exed_percentile, mask_duration_min, mean_clim[0])
+
+    HW_arg=np.argwhere(mask_duration_min.flatten()>0)
+    HW_intensity_daily=np.zeros(((nyear)*nday))
+    for arg in HW_arg:
+        arg=int(arg)
+        dur=int(mask_duration_min.flatten()[arg])
+        HW_intensity_daily[arg:arg+dur]=exed_percentile.flatten()[arg:arg+dur]
+
+    HW_occurrence=np.copy(HW_intensity_daily)
+    HW_occurrence[HW_occurrence>0]=1
+    HW_intensity_daily=np.ma.masked_where(HW_intensity_daily==0,HW_intensity_daily)
+    HW_occurrence=np.reshape(HW_occurrence,(nyear,nday))
+    HW_intensity_daily=np.reshape(HW_intensity_daily,(nyear,nday))
+    
+    return {"clim":mean_clim[0,:,0],"pc_90":perc_thresh_clim[0,:,0],"HW_intensity_daily":HW_intensity_daily,"HW_occurrence":HW_occurrence,"HWMI_year":sum(HWMIyear, [])}
+    #return(HWMIyear, HWlstyear, HWstartmembyear, HWendmembyear, ndaysexed_percentile, DD_threshold, subHWarrayyear, fitsubHWarrayyear, sstMeanarrayyear, count_impossible_fit, perc_thresh_clim[0], exed_percentile, mask_duration_min, mean_clim[0], HW_intensity_daily, HW_occurrence)
