@@ -51,9 +51,7 @@ The output is a list of predictors which contribute to recreating the HW time se
 Fig 2: Feature Selection: optimal predictors and lags used to recreate HW index in Figure 1.
 
 
-(3)
-
-The last role of the Owl is the application to CMIP6 climate simulations. In particular, the HW occurrence is calculated for each model, using “current-climate” baseline (CWS14.2, see D5.2), and the candidate predictors are calculated as above. For each simulation, the relevant drivers of HW are identified running the CRO on the corresponding CWS14.2. 
+(3) The last role of the Owl is the application to CMIP6 climate simulations. In particular, the HW occurrence is calculated for each model, using “current-climate” baseline (CWS14.2, see D5.2), and the candidate predictors are calculated as above. For each simulation, the relevant drivers of HW are identified running the CRO on the corresponding CWS14.2. 
 
 The list of drivers selected are used as benchmarks and are employed to construct storylines. These inspect the evolution of HW indices in future climate, putting constraints on the simultaneous changes of relevant drivers. The module checks, for an indicated pair of drivers, which CMIP6 simulations selected both of them during the feature selection. These simulations are then divided between those that have lower or larger trends than the multi-model mean, generating 4 groups of models, i.e. storylines. For each combination of driver impact a projected change of HW occurrence and frequency in future climate is provided.
 
