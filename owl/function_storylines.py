@@ -1265,7 +1265,7 @@ def scatter_dr_avg(diff_avg,drivers,wmg,wmg_base,num_sl,varspecs,conf_lev,rotate
 
 
 def storylines_diffs_boxplot(sl_code, HWind, values, averages, keys, drivers, wmg_base, wmg, unit='', output_path='./', exp_code='', region='', months_code='', poster=False):
-):
+
     """
     Creates and saves a boxplot for storyline analysis. In particular it plots the distribution of projected changes.
 
@@ -1396,8 +1396,6 @@ def storylines_diffs_boxplot(sl_code, HWind, values, averages, keys, drivers, wm
 
 
 def storylines_warmings_boxplot(sl_code, HWind, values_list1, values_list2, values_benchmark, averages1, averages2, averages0, keys, drivers, wmg_base, wmg, unit='', output_path = './', exp_code='', region='', months_code='', wmg_4plot='', wmg_base_4plot=''):
-
-):
     """
     Creates a side-by-side boxplot comparing the distributions of a given heatwave index 
     (or similar variable) for two climate warming scenarios (e.g., CWS15.0 vs CWS14.2),
